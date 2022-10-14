@@ -20,13 +20,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// openCmd represents the open command
-var openCmd = &cobra.Command{
-	Use:   "open",
-	Short: "opens a fuzzy-selection to search for a zettel to open",
-	Long:  `'ztl open': opens fuzzyfind with preview`,
+// tagsCmd represents the tags command
+var tagsCmd = &cobra.Command{
+	Use:   "tags",
+	Short: "work on #-markers",
+	Long:  `"ztl proj": returns list with all #-markers in zettelkasten`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := zd.OpenZtl()
+		markerlist, markermap, err := zd.GetMarkerLists(`(#\w+)`)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		err = zd.HandleMarkers(markerlist, markermap)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -34,15 +38,15 @@ var openCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(openCmd)
+	rootCmd.AddCommand(tagsCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// openCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// tagsCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// openCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// tagsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

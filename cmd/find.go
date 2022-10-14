@@ -20,13 +20,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// openCmd represents the open command
-var openCmd = &cobra.Command{
-	Use:   "open",
-	Short: "opens a fuzzy-selection to search for a zettel to open",
-	Long:  `'ztl open': opens fuzzyfind with preview`,
+// findCmd represents the find command
+var findCmd = &cobra.Command{
+	Use:   "find",
+	Short: "finds given args in zettelkasten",
+	Long:  `'ztl find foo': finds the word "foo"`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := zd.OpenZtl()
+
+		findTodos, err := cmd.Flags().GetBool("todo")
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		if findTodos {
+			err = zd.Find([]string{`(^| )- \[ \] `, ` TODO: `}, false)
+		} else {
+			err = zd.Find(args, false)
+		}
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -34,15 +44,15 @@ var openCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(openCmd)
+	rootCmd.AddCommand(findCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// openCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// findCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// openCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	findCmd.Flags().BoolP("todo", "t", false, "find todos")
 }

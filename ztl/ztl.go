@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -101,7 +102,7 @@ func (zd *ZettelData) OpenZtl() error {
 	if err != nil {
 		return err
 	}
-	// search for args
+	// search for h1-header
 	args := []string{`^# `}
 	rec, err := Search(args, ztls, false)
 	if err != nil {
@@ -110,23 +111,22 @@ func (zd *ZettelData) OpenZtl() error {
 	idx, err := fuzzyfinder.Find(
 		rec,
 		func(i int) string {
-			p := strings.Split(rec[i], ":")
+			p := strings.SplitN(rec[i], ":", 3)
 			return p[2]
 		},
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
 			if i == -1 {
 				return ""
 			}
-			p := strings.Split(rec[i], ":")
+			p := strings.SplitN(rec[i], ":", 3)
 			s, _ := os.ReadFile(p[0])
 			return string(s)
 		}))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("selected: %v\n", rec[idx])
-	return nil
-
+	p := strings.SplitN(rec[idx], ":", 3)
+	return zd.OpenFile(p[0], p[1])
 }
 
 // Search searches in given files for args and return list
@@ -182,4 +182,77 @@ func (zd *ZettelData) GetFilelist() ([]string, error) {
 	}
 
 	return filelist, nil
+}
+
+func (zd *ZettelData) OpenFile(fp string, line string) error {
+	editorCmd := exec.Command(zd.Editor, fp, "-n", "-f", "-l", line)
+	return editorCmd.Start()
+}
+
+func (zd *ZettelData) Find(args []string, isAND bool) error {
+	filelist, err := zd.GetFilelist()
+	if err != nil {
+		return (err)
+	}
+
+	list, err := Search(args, filelist, false)
+	if err != nil {
+		return (err)
+	}
+	idx, err := fuzzyfinder.Find(
+		list,
+		func(i int) string {
+			return strings.SplitN(list[i], ":", 3)[2]
+		},
+		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
+			if i == -1 {
+				return ""
+			}
+			fp := strings.SplitN(list[i], ":", 3)[0]
+			s, _ := os.ReadFile(fp)
+			return string(s)
+		}))
+
+	if err != nil {
+		return (err)
+	}
+
+	rec := strings.SplitN(list[idx], ":", 3) // 0: filepath, 1:line number, 2: line
+	/*
+		lineNumber, err := strconv.Atoi(rec[1])
+		if err != nil {
+			return fmt.Errorf("could not convert string to int %s: %v", rec[1], err)
+		}
+	*/
+	// fmt.Printf("selected: %v\n", list[idx])
+	return zd.OpenFile(rec[0], rec[1])
+
+}
+
+// Get ZtlHeader returns the ##-Header for the given linenumber or empty string if not found
+func GetZtlHeader(fp string, linenumberString string) (string, error) {
+	linenumber, err := strconv.Atoi(linenumberString)
+	if err != nil {
+		return "", fmt.Errorf("could not convert linenumber-string to int %s: %v", linenumberString, err)
+	}
+	if linenumber <= 0 {
+		return "", fmt.Errorf("linenumber out of range: %v", linenumber)
+	}
+	linenumber-- // line in files start on 1; in "Arrays" at 0...
+	bs, err := os.ReadFile(fp)
+	if err != nil {
+		return "", fmt.Errorf("could not open file %v: %v", fp, err)
+	}
+
+	lines := strings.Split(string(bs), "\n")
+	if linenumber >= len(lines) {
+		return "", fmt.Errorf("linenumber out of range %d: lines %d", linenumber, len(lines))
+	}
+
+	for i := linenumber; i >= 0; i-- {
+		if strings.HasPrefix(lines[i], "# ") {
+			return lines[i], nil
+		}
+	}
+	return "", nil
 }
