@@ -91,7 +91,14 @@ func (zd *ZettelData) NewZtl(args []string) error {
 		}
 	*/
 
-	editorCmd := exec.Command(zd.Editor, fp, "-n", "-f", "-e", "newztl")
+	/*
+			NEWZTL := `buffer.insert_text(-1, "---\ncreationdate: " .. os.date("%x at %X") .. "\n---\n\n# " )
+		buffer.document_end()`
+	*/
+	newztl := fmt.Sprintf(`buffer.insert_text(-1,"---\ncreationdate: %s\n---\n\n# ")
+buffer.document_end()`, time.Now().Format("02.01.2006 at 15:04:05"))
+
+	editorCmd := exec.Command(zd.Editor, fp, "-n", "-f", "-e", newztl)
 	return editorCmd.Start()
 
 }
