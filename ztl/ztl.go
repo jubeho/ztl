@@ -95,10 +95,21 @@ func (zd *ZettelData) NewZtl(args []string) error {
 			NEWZTL := `buffer.insert_text(-1, "---\ncreationdate: " .. os.date("%x at %X") .. "\n---\n\n# " )
 		buffer.document_end()`
 	*/
+
 	newztl := fmt.Sprintf(`buffer.insert_text(-1,"---\ncreationdate: %s\n---\n\n# ")
-buffer.document_end()`, time.Now().Format("02.01.2006 at 15:04:05"))
+		buffer.document_end()`, time.Now().Format("02.01.2006 at 15:04:05"))
+
+	/*
+		newztl := fmt.Sprintf("---\ncreationdate: %s\n---\n\n# ", time.Now().Format("02.01.2006 at 15:04:05"))
+		err := os.WriteFile(fp, []byte(newztl), 0644)
+		if err != nil {
+			logrus.Fatalf("could not write new zettel %v: %v", fp, err)
+		}
+	*/
 
 	editorCmd := exec.Command(zd.Editor, fp, "-n", "-f", "-e", newztl)
+	//editorCmd := exec.Command("/usr/bin/lite-xl", fp)
+	//editorCmd := exec.Command(zd.Editor, fp, "-n", "-f")
 	return editorCmd.Start()
 
 }
